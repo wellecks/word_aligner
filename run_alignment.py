@@ -3,11 +3,11 @@ from aligner import *
 # load the data
 e_file    = "data/hansards.e"
 f_file    = "data/hansards.f"
-num_sents = 1000
+num_sents = 10000
 data      = load_input(e_file, f_file, num_sents)
 
 # train the model
-model = train_model(IBMM1(), data)
+model = train_model(IBMM1(), data, 10)
 
 # use the model
 alignments = align(model, data)
