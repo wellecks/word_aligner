@@ -75,7 +75,7 @@ class IBMM1(Model):
 						max_amt = self.t[e_i][f_j]
 						max_elt = f_j
 				if max_elt != None:
-					row_alignments.append((i, j))
+					row_alignments.append((j, i))
 			alignments.append(row_alignments)
 		return alignments
 

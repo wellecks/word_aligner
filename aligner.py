@@ -27,8 +27,8 @@ def train_model(model, data, iters=10):
 #                [ [french1, ... , frenchm], [eng1, ... , engn] ]
 # Output: alignments - a list of row alignments of the form
 #				 [ [(1,2), (2,1)], ... , [(5,2), (4,5)] ]   
-#                where (i,j) denotes english word at position i
-#                aligned with foreign word at position j.
+#                where (i,j) denotes foreign word at position i
+#                aligned with english word at position j.
 def align(model, data):
 	sys.stderr.write("Aligning words...\n")
 	return model.align(data)
