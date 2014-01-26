@@ -7,6 +7,7 @@
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 import sys
+import pdb
 
 # Abstract model class. 
 class Model(object):
@@ -75,7 +76,8 @@ class IBMM1(Model):
 						max_amt = self.t[e_i][f_j]
 						max_elt = f_j
 				if max_elt != None:
-					row_alignments.append((j, i))
+					row_alignments.append((max_ind, i))
+					#sys.stderr.write("%s -> %s\n" % (e_i, max_elt))
 			alignments.append(row_alignments)
 		return alignments
 
