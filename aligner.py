@@ -5,7 +5,7 @@
 # Contains generic functions for training and using a Model.
 # Contains IO functions for loading and printing data.
 
-from model import Model, IBMM1
+from model import Model, IBMM1, BayesM
 import sys
 from collections import defaultdict
 
@@ -43,6 +43,9 @@ def load_input(e_fname, f_fname, num_sents):
 	bitext = [[sentence.strip().split() 
 	           for sentence in pair] 
 	           for pair in zip(open(f_fname), open(e_fname))[:num_sents]]
+	# add a blank word in each french sentence
+	for (f, e) in bitext:
+		f.append(None)
 	return bitext
 
 # Prints a list of alignments in the required format. E.g.,
