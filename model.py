@@ -66,7 +66,7 @@ class IBMM1(Model):
 			for ((e, f), c) in self.count.iteritems():
 				self.t[e][f] = c / self.total[f]
 
-	def align(self, data):
+	def align(self, data, reverse=False):
 		alignments = []
 		for (n, (f, e)) in enumerate(data):
 			row_alignments = []
@@ -80,7 +80,10 @@ class IBMM1(Model):
 						max_amt = self.t[e_i][f_j]
 						max_elt = f_j
 				if max_elt != None:
-					row_alignments.append((max_ind, i))
+					if reverse:
+						row_alignments.append((i, max_ind))
+					else:
+						row_alignments.append((max_ind, i))
 					self.a[n][i] = max_ind
 			alignments.append(row_alignments)
 		return alignments
