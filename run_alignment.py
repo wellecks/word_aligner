@@ -11,14 +11,14 @@ data      = load_input(e_file, f_file, num_sents)
 rdata	  = load_input(e_file, f_file, num_sents, True)
 
 # train the model
-model = train_model(IBMM1(), data, 10)
-model2 = train_model(IBMM1(), rdata, 10)
+model = train_model(IBMM2(), data, 5)
+model2 = train_model(IBMM2(), rdata, 5)
 
 # use the model
 #alignments  = align_intersect(align(model, data), align(model2, rdata))
 #alignments = align_union(align(model, data), align(model2, rdata))
 alignments = symmetrize(align(model, data), align(model2, rdata, True))
-
+#alignments = align(model, data)
 # model.save_alignments()
 
 # print the results

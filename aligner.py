@@ -5,7 +5,7 @@
 # Contains generic functions for training and using a Model.
 # Contains IO functions for loading and printing data.
 
-from model import Model, IBMM1, BayesM
+from model import Model, IBMM1, IBMM2, BayesM
 import sys
 from collections import defaultdict
 
@@ -39,7 +39,7 @@ def align(model, data, reverse=False):
 #         num_sents  - number of sentences to load
 # Output: bi_text    - [[f, e]] where f = [foreign words]
 #                                     e = [english words]
-def load_input(e_fname, f_fname, num_sents, reverse=False):
+def load_input(e_fname, f_fname, num_sents, reverse=False, addnull=True):
 	if reverse:
 		pairs = zip(open(e_fname), open(f_fname))[:num_sents]
 	else:
@@ -48,8 +48,9 @@ def load_input(e_fname, f_fname, num_sents, reverse=False):
 	           for sentence in pair] 
 	           for pair in pairs]
 	# add a blank word in each french sentence
-	for (f, e) in bitext:
-		f.append(None)
+	if addnull:
+		for (f, e) in bitext:
+			f.append(None)
 	return bitext
 
 # Given a list of pairs of alignments, create a table for
@@ -136,12 +137,15 @@ def align_union(a1, a2):
 #			a2 - alignments as formatted by align()
 # Output:	a_sym - symmetrized alignments as formatted by align()
 def symmetrize(a1, a2):
+	sys.stderr.write("Symmetrizing alignments.\n")
 	ts1 = mk_align_tables(a1)
 	ts2 = mk_align_tables(a2)
 	ts_int = tables_intersect(ts1, ts2)
 	ts_union = tables_union(ts1, ts2)
 	t_syms = []
 	for (n, (t1, t2)) in enumerate(zip(ts1, ts2)):
+		if (n + 1) % 1000 == 0:
+			sys.stderr.write("Symmetrized %i samples\n" % n)
 		t_syms.append(symmetrize_sentence(t1, t2, ts_int[n], ts_union[n]))
 	return tables_to_aligns(t_syms)
 

@@ -9,10 +9,20 @@ from collections import defaultdict, Counter
 import sys
 import pdb
 import pickle
+import math
 
 # Abstract model class. 
 class Model(object):
 	__metaclass__ = ABCMeta
+	def __init__(self):
+		# translation probabilities; t[i][j] = t(e_i | f_j)
+		self.t       = defaultdict(lambda: defaultdict(int))
+		# alignments; a[n][i] = alignment for english word i in sentence n
+		self.a       = defaultdict(lambda: defaultdict(int))
+		# english vocabulary
+		self.e_vocab = set()
+		# foreign vocabulary
+		self.f_vocab = set()
 
 	@abstractmethod
 	def train(self, data, iters):
@@ -25,21 +35,12 @@ class Model(object):
 # IBM Model 1 aligner.
 class IBMM1(Model):
 	def __init__(self):
-		# translation probabilities
-		# t[i][j] = t(e_i | f_j)
-		self.t       = defaultdict(lambda: defaultdict(int))
-		# alignments
-		# a[n][i] = alignment for english word i in sentence n
-		self.a       = defaultdict(lambda: defaultdict(int))
+		super(IBMM1, self).__init__()
 		# count[i][j] = count(e_i | f_j)
 		self.count   = defaultdict(int) 
 		# total[f]
 		self.total   = defaultdict(int)
 		self.s_total = defaultdict(int)
-		# english vocabulary
-		self.e_vocab = set()
-		# foreign vocabulary
-		self.f_vocab = set()
 
 	def train(self, data, iters):
 		# initialize probabilities
@@ -48,8 +49,8 @@ class IBMM1(Model):
 		for it in xrange(iters):
 			sys.stderr.write("Iteration %i\n" % it)
 			for (n, (f, e)) in enumerate(data):
-				if n % 1000 == 0:
-					sys.stderr.write("%i samples\n" % n)
+				if (n + 1) % 1000 == 0:
+					sys.stderr.write("%i samples\n" % (n+1))
 				# compute normalization
 				for e_j in e:
 					self.s_total[e_j] = 0
@@ -90,8 +91,6 @@ class IBMM1(Model):
 
 	# initialize t(e|f) uniformly; i.e. to 1 / |e_vocab|
 	def _init_tprobs(self, data):
-		#self.f_vocab.add(None)
-		#self.total[None] = 1
 		for (f, e) in data:
 			for f_i in f:
 				self.f_vocab.add(f_i)
@@ -107,17 +106,90 @@ class IBMM1(Model):
 		pickle.dump(self.a, out, pickle.HIGHEST_PROTOCOL)
 		out.close()
 
+# IBM Model 2 word aligner.
+class IBMM2(Model):
+	def __init__(self):
+		super(IBMM2, self).__init__()
+		# count[i][j] = count(e_i | f_j)
+		self.count   = defaultdict(lambda: 0.000001) 
+		# total[f]
+		self.total   = defaultdict(lambda: 0.000001)
+		self.s_total = defaultdict(lambda: 0.000001)
+		self.count_a = defaultdict(lambda: 0.000001)
+		self.total_a = defaultdict(lambda: 0.000001)
+		self.a       = defaultdict(lambda: 0.000001)
+
+	def train(self, data, iters):
+		# initialize probabilities
+		self._init_tprobs(data, iters)
+
+		for it in xrange(iters):
+			sys.stderr.write("Iteration %i\n" % it)
+			for (n, (f, e)) in enumerate(data):
+				if (n + 1) % 1000 == 0:
+					sys.stderr.write("%i samples\n" % (n+1))
+
+				le = len(e)
+				lf = len(f)
+				# compute normalization
+				for (j, e_j) in enumerate(e):
+					self.s_total[e_j] = 1
+					for (i, f_i) in enumerate(f):
+						if self.a[(i, j, le, lf)] == 0:
+							self.a[(i, j, le, lf)] = (1 / (lf + 1))
+						self.s_total[e_j] += self.t[e_j][f_i] + self.a[(i, j, le, lf)]
+				# compute counts
+				for (j, e_j) in enumerate(e):
+					for (i, f_i) in enumerate(f):
+						c = (self.t[e_j][f_i] * self.a[(i, j, le, lf)]) / self.s_total[e_j]
+						self.count[(e_j, f_i)] += c
+						self.total[f_i] += c
+						self.count_a[(i, j, le, lf)] += c
+						self.total_a[(e_j, le, lf)] += c
+
+			# estimate probabilities
+			for ((e, f), c) in self.count.iteritems():
+				self.t[e][f] = c / self.total[f]
+
+			for ((i, j, le, lf), c) in self.count_a.iteritems():
+				self.a[(i, j, le, lf)] = c / self.total_a[(j, le, lf)]
+
+	def align(self, data, reverse=False):
+		alignments = []
+		for (n, (f, e)) in enumerate(data):
+			le = len(e)
+			lf = len(f)
+			row_alignments = []
+			for (i, e_i) in enumerate(e):
+				max_ind = 0
+				max_amt = -1000
+				max_elt = None
+				for (j, f_j) in enumerate(f):
+					a_i = math.log(self.a[(j, i, le, lf)]) + math.log(self.t[e_i][f_j])
+					if a_i > max_amt:
+						max_ind = j
+						max_elt = f_j
+						max_amt = a_i
+				if max_elt != None:
+					if reverse:
+						row_alignments.append((i, max_ind))
+					else:
+						row_alignments.append((max_ind, i))
+			alignments.append(row_alignments)
+		return alignments
+
+	# initialize t(e|f) probabilities using IBM Model 1
+	def _init_tprobs(self, data, iters):
+		model = IBMM1()
+		model.train(data, iters)
+		self.t = model.t
+
 # Bayesian word aligner with Dirichlet prior and trained with Gibbs Sampling.
 class BayesM(Model):
 
 	def __init__(self):
-		self.t = defaultdict(lambda: defaultdict(int))
-		self.a = defaultdict(lambda: defaultdict(int))
+		super().__init__()
 		self.sample = defaultdict(lambda: defaultdict(lambda: []))
-		# english vocabulary
-		self.e_vocab = set()
-		# foreign vocabulary
-		self.f_vocab = set()
 		self.counts = defaultdict(lambda: defaultdict(int))
 		self.totals = defaultdict(int)
 
