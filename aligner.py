@@ -29,9 +29,9 @@ def train_model(model, data, iters=10):
 #				 [ [(1,2), (2,1)], ... , [(5,2), (4,5)] ]   
 #                where (i,j) denotes foreign word at position i
 #                aligned with english word at position j.
-def align(model, data):
+def align(model, data, reverse=False):
 	sys.stderr.write("Aligning words...\n")
-	return model.align(data)
+	return model.align(data, reverse)
 
 # Read and format input from parallel corpus files.
 # Input:  e_fname - filename of English corpus
@@ -130,6 +130,42 @@ def align_intersect(a1, a2):
 def align_union(a1, a2):
 	ts_int = tables_union(mk_align_tables(a1), mk_align_tables(a2))
 	return tables_to_aligns(ts_int)
+
+# Run the symmetrization algorithm on alignments.
+# Input:	a1 - alignments as formatted by align()
+#			a2 - alignments as formatted by align()
+# Output:	a_sym - symmetrized alignments as formatted by align()
+def symmetrize(a1, a2):
+	ts1 = mk_align_tables(a1)
+	ts2 = mk_align_tables(a2)
+	ts_int = tables_intersect(ts1, ts2)
+	ts_union = tables_union(ts1, ts2)
+	t_syms = []
+	for (n, (t1, t2)) in enumerate(zip(ts1, ts2)):
+		t_syms.append(symmetrize_sentence(t1, t2, ts_int[n], ts_union[n]))
+	return tables_to_aligns(t_syms)
+
+# Run the symmetrization on a single input sentence in table form.
+# Input:	t1 - alignment table from model1 for sentence s
+#			t2 - alignment table from model2 for sentence s
+#			t_int   - the intersection of t1 and t2
+#			t_union - the union of t1 and t2
+# Output:	t_sym - symmetrized table for sentence s
+def symmetrize_sentence(t1, t2, t_int, t_union):
+	neighboring = [(-1, 0), (0, -1), (1, 0), (0, 1),
+	               (-1,-1), (-1, 1), (1,-1), (1, 1)]
+	t_sym = t_int
+	added = True
+	while(added):
+		added = False
+		for i in t_sym.keys():
+			for j in t_sym[i].keys():
+				if t_sym[i][j] == 1:
+					for (x, y) in neighboring:
+						if t_sym[i+x][j+y] == 0 and t_union[i+x][j+y] == 1:
+							t_sym[i+x][j+y] = 1
+							added = True
+	return t_sym
 
 # Prints a list of alignments in the required format. E.g.,
 #     1-2 4-1 3-2

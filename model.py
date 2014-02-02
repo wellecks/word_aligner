@@ -19,7 +19,7 @@ class Model(object):
 		pass
 
 	@abstractmethod
-	def align(self, data):
+	def align(self, data, reverse=False):
 		pass
 
 # IBM Model 1 aligner.
@@ -107,7 +107,7 @@ class IBMM1(Model):
 		pickle.dump(self.a, out, pickle.HIGHEST_PROTOCOL)
 		out.close()
 
-# TODO: Bayesian word aligner.
+# Bayesian word aligner with Dirichlet prior and trained with Gibbs Sampling.
 class BayesM(Model):
 
 	def __init__(self):
@@ -173,12 +173,11 @@ class BayesM(Model):
 			s -= distribution[i]
 		return i
 
-
 	def _gibbs_prob(self, j, e_j, i, f_i):
 		p_aji = (self.counts[e_j][f_i] + self.t[e_j][f_i]) / (self.totals[e_j] + len(self.f_vocab)*self.t[e_j][f_i])
 		return p_aji
 
-	def align(self, data):
+	def align(self, data, reverse=False):
 		alignments = []
 		for (n, (f, e)) in enumerate(data):
 			row_alignments = []
