@@ -187,6 +187,9 @@ class IBMM2(Model):
 		self.t = model.t
 
 # Bayesian word aligner with Dirichlet prior and trained with Gibbs Sampling.
+# Based on paper by Mermer and Saraclar.
+# Note: unfortunately I couldn't get this to run efficiently for large
+# datasets so did not use this in my final model.
 class BayesM(Model):
 
 	def __init__(self):

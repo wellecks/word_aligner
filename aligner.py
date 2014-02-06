@@ -4,6 +4,8 @@
 # Top level module for performing word alignment.
 # Contains generic functions for training and using a Model.
 # Contains IO functions for loading and printing data.
+# Contains the symmetrization algorithm for combining results
+# from two models.
 
 from model import Model, IBMM1, IBMM2, BayesM
 import sys
@@ -222,7 +224,9 @@ def symmetrize_sentence(t1, t2, t_int, t_union):
 							added = True
 	return t_sym
 
-
+# Prints out a single alignment in the required format. E.g.,
+#     1-2 4-1 3-2
+# Input: alignment - a row's alignments
 def print_one(alignment):
 	for (i, j) in alignment:
 		sys.stdout.write("%i-%i " % (i,j))
@@ -236,3 +240,15 @@ def print_output(alignments):
 		for (i, j) in sentence:
 			sys.stdout.write("%i-%i " % (i,j))
 		sys.stdout.write("\n")
+
+def load_alignments(filename):
+	aligns = []
+	lines = [line.strip() for line in open(filename)]
+	for line in lines:
+		ps = line.split()
+		row = []
+		for p in ps:
+			i, j = p.split("-")
+			row.append((int(i), int(j)))
+		aligns.append(row)
+	return aligns
