@@ -1,8 +1,8 @@
-#Word Aligner
+##Word Aligner
 
 ####Statistical Machine Translation
 
-**Sean Welleck | 2014**
+**Sean Welleck**
 
 This project is related to the problem of aligning words from a source and target language.
 
