@@ -62,11 +62,18 @@ def load_input(e_fname, f_fname, num_sents, reverse=False, addnull=True):
 def mk_align_tables(alignments):
 	tables = []
 	for sentence in alignments:
-		table = defaultdict(lambda: defaultdict(int))
-		for (f_i, e_j) in sentence:
-			table[e_j][f_i] = 1
-		tables.append(table)
+		tables.append(mk_align_table(sentence))
 	return tables
+
+# Given a list of pairs of alignments, create a table for
+# each sentence pair.
+# Input:	alignments - alignment as formatted by align()
+# Output:	table      - table (len(e)) x (len(f)) for a sentence pair (e,f)
+def mk_align_table(alignment):
+	table = defaultdict(lambda: defaultdict(int))
+	for (f_i, e_j) in alignment:
+		table[e_j][f_i] = 1
+	return table
 
 # Converts a list of alignment tables into a list of alignment pairs.
 # Input:	tables - list of table as formatted by mk_align_tables()
@@ -82,6 +89,17 @@ def tables_to_aligns(tables):
 		alignments.append(row_alignments)
 	return alignments
 
+# Converts a table into an alignment.
+# Input:	table - table as formatted by mk_align_table()
+# Output: 	alignment- alignment as formatted by align()
+def table_to_align(table):
+	alignment = []
+	for e_i in table.keys():
+		for f_j in table[e_i].keys():
+			if table[e_i][f_j] == 1:
+				alignment.append((f_j, e_i))
+	return alignment
+
 # Return the intersection of two lists of alignment tables.
 # Input:	ts1 - list of alignments as formatted by mk_align_tables()
 #			ts2 - list of alignments as formatted by mk_align_tables()
@@ -89,13 +107,22 @@ def tables_to_aligns(tables):
 def tables_intersect(ts1, ts2):
 	ts_int = []
 	for (n, (t1, t2)) in enumerate(zip(ts1, ts2)):
-		t_int = defaultdict(lambda: defaultdict(int))
-		for i in t1.keys():
-			for j in t1[i].keys():
-				if t1[i][j] == 1 and t2[i][j] == 1:
-					t_int[i][j] = 1
-		ts_int.append(t_int)
+		if (n + 1) % 1000 == 0:
+			sys.stderr.write("Intersected %i samples\n" % (n+1))
+		ts_int.append(table_intersect(t1, t2))
 	return ts_int
+
+# Return the intersection of two alignment tables.
+# Input:	t1 - table as formatted by mk_align_table()
+#			t2 - table as formatted by mk_align_table()
+# Output:	t_int - intersection of t1 and t2
+def table_intersect(t1, t2):
+	t_int = defaultdict(lambda: defaultdict(int))
+	for i in t1.keys():
+		for j in t1[i].keys():
+			if t1[i][j] == 1 and t2[i][j] == 1:
+				t_int[i][j] = 1
+	return t_int
 
 # Return the union of two lists of alignment tables.
 # Input:	ts1 - list of alignments as formatted by mk_align_tables()
@@ -104,17 +131,26 @@ def tables_intersect(ts1, ts2):
 def tables_union(ts1, ts2):
 	ts_int = []
 	for (n, (t1, t2)) in enumerate(zip(ts1, ts2)):
-		t_int = defaultdict(lambda: defaultdict(int))
-		for i in t1.keys():
-			for j in t1[i].keys():
-				if t1[i][j] == 1:
-					t_int[i][j] = 1
-		for i in t2.keys():
-			for j in t2[i].keys():
-				if t2[i][j] == 1:
-					t_int[i][j] = 1
-		ts_int.append(t_int)
+		if (n + 1) % 1000 == 0:
+			sys.stderr.write("Unioned %i samples\n" % (n+1))
+		ts_int.append(table_union(t1, t2))
 	return ts_int
+
+# Return the union of two alignment tables.
+# Input:	t1 - alignment as formatted by mk_align_table()
+#			t2 - alignment as formatted by mk_align_table()
+# Output:	t_union - union of t1 and t2
+def table_union(t1, t2):
+	t_union = defaultdict(lambda: defaultdict(int))
+	for i in t1.keys():
+		for j in t1[i].keys():
+			if t1[i][j] == 1:
+				t_union[i][j] = 1
+	for i in t2.keys():
+		for j in t2[i].keys():
+			if t2[i][j] == 1:
+				t_union[i][j] = 1
+	return t_union
 
 # Top level function for alignment intersection.
 # Input:	a1 - alignments as formatted by align()
@@ -133,10 +169,25 @@ def align_union(a1, a2):
 	return tables_to_aligns(ts_int)
 
 # Run the symmetrization algorithm on alignments.
+# Input:	as1 - alignments as formatted by align()
+#			as2 - alignments as formatted by align()
+# Output:	a_sym - symmetrized alignments as formatted by align()
+def symmetrize(as1, as2):
+	sys.stderr.write("Symmetrizing alignments.\n")
+	for (n, (a1, a2)) in enumerate(zip(as1, as2)):
+		if (n + 1) % 1000 == 0:
+			sys.stderr.write("Symmetrized %i samples\n" % (n+1))
+		t1 = mk_align_table(a1)
+		t2 = mk_align_table(a2)
+		t_int = table_intersect(t1, t2)
+		t_union = table_union(t1, t2)
+		print_one(table_to_align(symmetrize_sentence(t1, t2, t_int, t_union)))
+
+# Run the symmetrization algorithm on alignments.
 # Input:	a1 - alignments as formatted by align()
 #			a2 - alignments as formatted by align()
 # Output:	a_sym - symmetrized alignments as formatted by align()
-def symmetrize(a1, a2):
+def symmetrize_all(a1, a2):
 	sys.stderr.write("Symmetrizing alignments.\n")
 	ts1 = mk_align_tables(a1)
 	ts2 = mk_align_tables(a2)
@@ -170,6 +221,12 @@ def symmetrize_sentence(t1, t2, t_int, t_union):
 							t_sym[i+x][j+y] = 1
 							added = True
 	return t_sym
+
+
+def print_one(alignment):
+	for (i, j) in alignment:
+		sys.stdout.write("%i-%i " % (i,j))
+	sys.stdout.write("\n")
 
 # Prints a list of alignments in the required format. E.g.,
 #     1-2 4-1 3-2

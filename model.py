@@ -157,6 +157,8 @@ class IBMM2(Model):
 	def align(self, data, reverse=False):
 		alignments = []
 		for (n, (f, e)) in enumerate(data):
+			if (n + 1) % 1000 == 0:
+				sys.stderr.write("Aligned %i samples\n" % (n+1))
 			le = len(e)
 			lf = len(f)
 			row_alignments = []
