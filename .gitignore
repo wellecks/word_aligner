@@ -2,3 +2,4 @@
 *.pkl
 *.a
 .gitignore
+.gitignore~
