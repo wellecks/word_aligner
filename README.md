@@ -1,5 +1,3 @@
-word_aligner
-============
 #Word Aligner
 
 ####Statistical Machine Translation
