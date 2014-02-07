@@ -1,6 +1,6 @@
 ##Word Aligner
 
-####CIS526 | Machine Translation | HW1
+####CIS526, Machine Translation, HW1
 
 **Sean Welleck**
 
