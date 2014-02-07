@@ -12,12 +12,14 @@ The project contains three models:
 - Bayesian Aligner
 
 And symmetrization to combine the results of two models.
+
 Run ```python run_alignment.py > output.txt``` to train the models and output alignments to output.txt.
 
 -----
 #####model.py
-Contains the model implementations. Each model extends the ```Model()``` class
-and must implement the ```train()``` and ```align()``` functions.
+Contains the model implementations, ```IBMM1()```, ```IBMM2()```, ```BayesM()```. 
+
+Each model extends the ```Model()``` class and must implement the ```train()``` and ```align()``` functions.
 #####aligner.py
 Contains top level functions for using the models:
 ```python
